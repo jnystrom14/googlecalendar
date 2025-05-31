@@ -1,0 +1,25 @@
+{
+  "name": "calendar-trello-automation",
+  "version": "1.0.0",
+  "description": "Automated Google Calendar to Trello sync with daily rollover",
+  "main": "api/sync.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "google-calendar",
+    "trello",
+    "automation",
+    "oauth2",
+    "serverless"
+  ],
+  "author": "",
+  "license": "ISC"
+}
