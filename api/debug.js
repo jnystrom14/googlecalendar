@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     // Get all lists from the board
     let boardLists = [];
     let boardError = null;
+    let boardResponseRaw = null;
     
     try {
       const boardUrl = `https://api.trello.com/1/boards/${process.env.TRELLO_BOARD_ID}/lists`;
@@ -33,11 +34,14 @@ export default async function handler(req, res) {
       });
       
       const boardResponse = await fetch(`${boardUrl}?${boardParams}`);
-      boardLists = await boardResponse.json();
+      const responseText = await boardResponse.text();
+      boardResponseRaw = responseText;
       
       if (!boardResponse.ok) {
-        throw new Error(`Board API error: ${boardResponse.statusText}`);
+        throw new Error(`Board API error (${boardResponse.status}): ${responseText}`);
       }
+      
+      boardLists = JSON.parse(responseText);
     } catch (error) {
       boardError = error.message;
     }
@@ -108,6 +112,7 @@ export default async function handler(req, res) {
         trello: trelloError,
         calendar: calendarError
       },
+      boardResponseRaw: boardResponseRaw,
       data: {
         dateRanges: {
           today: todayRange,
