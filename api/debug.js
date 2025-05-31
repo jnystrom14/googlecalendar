@@ -16,9 +16,31 @@ export default async function handler(req, res) {
       hasTrelloBoardId: !!process.env.TRELLO_BOARD_ID,
       hasTodayListId: !!process.env.TODAY_LIST_ID,
       hasTomorrowListId: !!process.env.TOMORROW_LIST_ID,
+      boardId: process.env.TRELLO_BOARD_ID,
       todayListId: process.env.TODAY_LIST_ID,
       tomorrowListId: process.env.TOMORROW_LIST_ID
     };
+
+    // Get all lists from the board
+    let boardLists = [];
+    let boardError = null;
+    
+    try {
+      const boardUrl = `https://api.trello.com/1/boards/${process.env.TRELLO_BOARD_ID}/lists`;
+      const boardParams = new URLSearchParams({
+        key: process.env.TRELLO_API_KEY,
+        token: process.env.TRELLO_TOKEN
+      });
+      
+      const boardResponse = await fetch(`${boardUrl}?${boardParams}`);
+      boardLists = await boardResponse.json();
+      
+      if (!boardResponse.ok) {
+        throw new Error(`Board API error: ${boardResponse.statusText}`);
+      }
+    } catch (error) {
+      boardError = error.message;
+    }
     
     // Check tokens
     if (!sync.hasValidTokens()) {
@@ -76,7 +98,13 @@ export default async function handler(req, res) {
       success: true,
       message: 'Debug data collected',
       envCheck: envCheck,
+      boardLists: boardLists.map(list => ({
+        id: list.id,
+        name: list.name,
+        closed: list.closed
+      })),
       errors: {
+        board: boardError,
         trello: trelloError,
         calendar: calendarError
       },
