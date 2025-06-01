@@ -52,6 +52,7 @@ export default async function handler(req, res) {
       startOfDay.toISOString(), 
       endOfDay.toISOString(),
       accessToken,
+      refreshToken,
       config
     );
     
@@ -134,9 +135,10 @@ async function moveCardToList(cardId, newListId, config) {
   return await response.json();
 }
 
-async function getCalendarEvents(timeMin, timeMax, accessToken, config) {
+async function getCalendarEvents(timeMin, timeMax, accessToken, refreshToken, config) {
   const allEvents = [];
   const eventTitleMap = new Map();
+  let currentAccessToken = accessToken;
   
   for (const calendarId of config.CALENDAR_IDS) {
     try {
@@ -148,14 +150,26 @@ async function getCalendarEvents(timeMin, timeMax, accessToken, config) {
       });
 
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+      let response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${currentAccessToken}` }
       });
+      
+      // If 401, try refreshing token
+      if (response.status === 401) {
+        console.log('🔄 Token expired, refreshing...');
+        currentAccessToken = await refreshAccessToken(refreshToken);
+        
+        response = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` }
+        });
+      }
       
       const data = await response.json();
       if (!response.ok) throw new Error(`Calendar API error: ${data.error?.message}`);
       
       const events = data.items || [];
+      console.log(`📅 ${calendarId.split('@')[0]}: ${events.length} events`);
+      
       events.forEach(event => {
         const startTime = event.start?.dateTime || event.start?.date;
         const uniqueKey = `${event.summary || 'Untitled'}_${startTime}`;
@@ -171,6 +185,29 @@ async function getCalendarEvents(timeMin, timeMax, accessToken, config) {
   }
   
   return allEvents;
+}
+
+async function refreshAccessToken(refreshToken) {
+  const refreshData = {
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token'
+  };
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(refreshData)
+  });
+
+  const tokens = await response.json();
+  if (!response.ok) {
+    throw new Error(`Token refresh failed: ${tokens.error_description || tokens.error}`);
+  }
+
+  console.log('✅ Access token refreshed');
+  return tokens.access_token;
 }
 
 async function createTrelloCard(listId, cardData, config) {
