@@ -172,11 +172,23 @@ async function getCalendarEvents(timeMin, timeMax, accessToken, refreshToken, co
       
       events.forEach(event => {
         const startTime = event.start?.dateTime || event.start?.date;
-        const uniqueKey = `${event.summary || 'Untitled'}_${startTime}`;
         
-        if (!eventTitleMap.has(uniqueKey)) {
-          eventTitleMap.set(uniqueKey, true);
-          allEvents.push(event);
+        // Filter events to only include those actually on tomorrow's date
+        const eventDate = new Date(startTime).toDateString();
+        const tomorrowDate = new Date(timeMin).toDateString();
+        
+        console.log(`  📅 ${event.summary}: ${startTime} (${eventDate}) - Target: ${tomorrowDate}`);
+        
+        if (eventDate === tomorrowDate) {
+          const uniqueKey = `${event.summary || 'Untitled'}_${startTime}`;
+          
+          if (!eventTitleMap.has(uniqueKey)) {
+            eventTitleMap.set(uniqueKey, true);
+            allEvents.push(event);
+            console.log(`    ✅ Added: ${event.summary}`);
+          }
+        } else {
+          console.log(`    ❌ Skipped (wrong date): ${event.summary}`);
         }
       });
     } catch (error) {
