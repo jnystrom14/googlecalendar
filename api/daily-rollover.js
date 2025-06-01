@@ -22,12 +22,11 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('❌ Daily rollover failed:', error);
     
-    // Still return 200 to prevent Vercel from retrying
-    return res.status(200).json({
+    return res.status(500).json({
       success: false,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      note: 'Will retry tomorrow at 4:00 AM'
+      error_type: 'SERVER_ERROR',
+      message: 'Daily rollover failed due to a server error.',
+      timestamp: new Date().toISOString()
     });
   }
 }
