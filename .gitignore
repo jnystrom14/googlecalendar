@@ -2,3 +2,4 @@ google_tokens.json
 *.env
 node_modules/
 .vercel
+.env.local
